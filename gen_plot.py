@@ -1,9 +1,9 @@
+import sys
 import numpy as np
 import pandas as pd
-import transforms3d.affines as ta
 import transforms3d.quaternions as tq
 import matplotlib.pyplot as plt
-from common import b0_to_world, matrix_from_pose, matrix_to_pose, cam0_path, imu_ground_truth_path
+from common import b0_to_world, matrix_from_pose, matrix_to_pose, cam0_path, imu_ground_truth_path, body_to_cam, cam_to_body
 
 def plot_pose(ax, translation, quaternion, color):
 
@@ -26,6 +26,7 @@ def plot_poses(imu_file_path, cam_file_path, ax, num_poses, step):
     num_poses = min(num_poses, len(imu_file), len(cam_file))
 
     w_t_b0 = b0_to_world(imu_rows[0])
+    cam0_to_world = np.dot(w_t_b0,cam_to_body)
 
 
     for i in range(0, num_poses, step):
@@ -37,18 +38,26 @@ def plot_poses(imu_file_path, cam_file_path, ax, num_poses, step):
 
         C0_T_Ci = matrix_from_pose(cam0_t_wrt_c0,cam0_q_wrt_c0)
 
-        W_T_Ci = np.dot(w_t_b0,C0_T_Ci)
+        W_T_Ci = np.dot(cam0_to_world,C0_T_Ci)
 
         cam0_t, cam0_q = matrix_to_pose(W_T_Ci)
 
-        plot_pose(ax, imu_t.iloc, imu_q, color='b')
-        plot_pose(ax, cam0_t, cam0_q, color='r')
+        plot_pose(ax, imu_t.iloc, imu_q, color='r')
+        plot_pose(ax, cam0_t, cam0_q, color='b')
 
 def main():
+    poses = 10
+    step = 1
+    if len(sys.argv) >= 2 :
+        poses = int(sys.argv[1])
+
+    if len(sys.argv) >= 3 :
+        step = int(sys.argv[2])
+
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     
-    plot_poses(imu_ground_truth_path,cam0_path,ax, 1000, 10)
+    plot_poses(imu_ground_truth_path,cam0_path,ax, poses, step)
     
     ax.set_xlabel('X')
     ax.set_ylabel('Y')

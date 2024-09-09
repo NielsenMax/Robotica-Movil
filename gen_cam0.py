@@ -1,13 +1,7 @@
 import csv
 import numpy as np
 import pandas as pd
-from common import b0_to_world,matrix_from_pose,matrix_to_pose,imu_ground_truth_path,cam0_path
-
-matrix = np.array([[0.0148655429818, -0.999880929698, 0.00414029679422, -0.0216401454975],
-                   [0.999557249008, 0.0149672133247, 0.025715529948, -0.064676986768],
-                   [-0.0257744366974, 0.00375618835797, 0.999660727178, 0.00981073058949],
-                   [0.0, 0.0, 0.0, 1.0]])
-cam_to_body = np.linalg.inv(matrix)
+from common import b0_to_world,matrix_from_pose,matrix_to_pose,imu_ground_truth_path,cam0_path, body_to_cam, cam_to_body
 
 
 def algorithm(inpath,outpath):
@@ -17,7 +11,7 @@ def algorithm(inpath,outpath):
 
     w_t_b0 = b0_to_world(ground_df.iloc[0])
     b0_t_w = np.linalg.inv(w_t_b0)
-    c0_t_w = np.dot(cam_to_body, b0_t_w)
+    w_to_c0 = np.dot(body_to_cam, b0_t_w)
 
     for row in ground_df.iterrows():
         translation_imu = np.array(row[1][1:4])
@@ -26,7 +20,7 @@ def algorithm(inpath,outpath):
 
         bi_to_w = matrix_from_pose(translation_imu,quaternion_imu)
 
-        C0_e_Ci = np.dot(np.dot(c0_t_w, bi_to_w), matrix)
+        C0_e_Ci = np.dot(np.dot(w_to_c0, bi_to_w), cam_to_body)
 
         cam0_t, cam0_q = matrix_to_pose(C0_e_Ci)
 
