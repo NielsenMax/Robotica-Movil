@@ -1,59 +1,70 @@
 import pandas as pd
 import numpy as np
 import transforms3d.quaternions as tq
-
-file_path = '/run/media/lau/Datos/Datos/LCC/Robotica/TP1/mav0/state_groundtruth_estimate0/data.csv'
-df = pd.read_csv(file_path)
-selected_columns = df.iloc[:, :8]
-selected_columns.columns = ['timestamp', 'x', 'y', 'z', 'qw', 'qx', 'qy', 'qz']
-
-trajectory = []
-for row in selected_columns.iterrows():
-    timestamp = row[1][0]
-    position = np.array(row[1][1:4])
-    quaternion = np.array(row[1][4:8])
-
-    rotated = tq.rotate_vector(position, quaternion)
-    trajectory.append(rotated)
-
+import transforms3d.affines as ta
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.animation import FuncAnimation
+import transforms3d.affines as ta
 
-# Example: list of 3x1 numpy arrays
-#positions = [np.array([x, y, z]).reshape(3, 1) for x, y, z in zip(range(10), range(10, 20), range(20, 30))]
-positions = np.array(trajectory)
+matrix = np.array([[0.0148655429818, -0.999880929698, 0.00414029679422, -0.0216401454975],
+                   [0.999557249008, 0.0149672133247, 0.025715529948, -0.064676986768],
+                   [-0.0257744366974, 0.00375618835797, 0.999660727178, 0.00981073058949],
+                   [0.0, 0.0, 0.0, 1.0]])
 
-# Extract X, Y, Z coordinates
-x_coords = positions[:, 0]
-y_coords = positions[:, 1]
-z_coords = positions[:, 2]
+def matrix_from_pose(t,q):
+    transformation_matrix = ta.compose(t, tq.quat2mat(q), np.ones(3))
 
-indices = list(range(0, len(positions), round(len(positions)/1000))) + [len(positions)-1]
-x_coords = x_coords[indices]
-y_coords = y_coords[indices]
-z_coords = z_coords[indices]
+    return transformation_matrix
 
-fig = plt.figure(dpi=100)
-ax = fig.add_subplot(projection='3d')
-ax.set(xlim=(min(x_coords), 
-                max(x_coords)), 
-          ylim=(min(y_coords), 
-                max(y_coords)), 
-          zlim=(min(z_coords), 
-                max(z_coords)))
-line = ax.plot(x_coords, y_coords, z_coords)[0]
-def update(frame):
-    print(f"Frame: {frame}")
-    x = x_coords[:frame]
-    y = y_coords[:frame]
-    z = z_coords[:frame]
+def matrix_to_pose(matrix):
+    translation, rotation_matrix, _, _ = ta.decompose44(matrix)
+    quaternion = tq.mat2quat(rotation_matrix)
 
-    line.set_data_3d((x, y, z))
+    translation = [round(t, 6) for t in translation]
+    quaternion = [round(q, 6) for q in quaternion]
+    return translation,quaternion
 
-    return line
+ground_path= './mav0/state_groundtruth_estimate0/data.csv'
+
+ground_df = pd.read_csv(ground_path)
+
+num_poses = min(len(ground_df), len(cam_df))
+
+c_t_b = np.linalg.inv(matrix)
+
+imu = ground_df[0]
+translation_imu = np.array(imu[1:4])
+quaternion_imu = np.array(imu[1][4:8])
+ 
+w_t_b0 = matrix_from_pose(translation_imu,quaternion_imu)
+b0_t_w = np.linalg.inv(w_t_b0)
+
+w_t_c0 = np.dot(w_t_b0,matrix)
+c0_t_w = np.dot(c_t_b, b0_t_w)
+
+fig = plt.figure
+ax1 = fig.add_subplot(121, projection='3d')
+ax1.set_title("IMU")
+ax2 = fig.add_subplot(122, projection='3d')
+ax2.set_title("Cámara")
+
+for i in range(num_poses):
+    imu = ground_df[i]  
+    cam = cam_df[i]
+    translation_imu = np.array(imu[1:4])
+    translation_cam = np.array(cam[1:4])
+
+    quaternion_imu = np.array(imu[1][4:8])
+    quaternion_cam = np.array(cam[1][4:8])
+
+    t = matrix_from_pose(quaternion_imu, quaternion_cam)
+    w_t_ci = np.dot(w_t_c0,t)
+    cam0_t, cam0_q = matrix_to_pose(w_t_ci)
 
 
-ani = FuncAnimation(fig=fig, func=update, frames=len(indices), interval=30, repeat=True)
-ani.save("trajectory.mp4", writer='ffmpeg', fps=30, extra_args=['-loop','1'])
+    ax1.scatter(translation_imu[0], translation_imu[1], translation_imu[2])
+    ax2.scatter(cam0_t[0], cam0_t[1], cam0_t[2])
+
 plt.show()
+
