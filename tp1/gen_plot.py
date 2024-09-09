@@ -25,22 +25,22 @@ def plot_poses(imu_file_path, cam_file_path, ax, num_poses, step):
 
     num_poses = min(num_poses, len(imu_file), len(cam_file))
 
-    w_t_b0 = b0_to_world(imu_rows[0])
-    cam0_to_world = np.dot(w_t_b0,cam_to_body)
+    body0_to_world = b0_to_world(imu_rows[0])
+    cam0_to_world = np.dot(body0_to_world,cam_to_body)
 
 
     for i in range(0, num_poses, step):
         imu_t = imu_rows[i][1:4]
         imu_q = imu_rows[i][4:8]
 
-        cam0_t_wrt_c0 = cam_rows[i][1:4]
-        cam0_q_wrt_c0 = cam_rows[i][4:8]
+        cam0_to_cami_t = cam_rows[i][1:4]
+        cam0_to_cami_q = cam_rows[i][4:8]
 
-        C0_T_Ci = matrix_from_pose(cam0_t_wrt_c0,cam0_q_wrt_c0)
+        cami_to_cam0 = matrix_from_pose(cam0_to_cami_t,cam0_to_cami_q)
 
-        W_T_Ci = np.dot(cam0_to_world,C0_T_Ci)
+        cami_to_world = np.dot(cam0_to_world,cami_to_cam0)
 
-        cam0_t, cam0_q = matrix_to_pose(W_T_Ci)
+        cam0_t, cam0_q = matrix_to_pose(cami_to_world)
 
         plot_pose(ax, imu_t.iloc, imu_q, color='r')
         plot_pose(ax, cam0_t, cam0_q, color='b')
