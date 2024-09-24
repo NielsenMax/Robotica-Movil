@@ -1,0 +1,18 @@
+services:
+  ros2_container:
+    build:
+      context: .
+      dockerfile: Dockerfile.jazzy
+    container_name: ros2
+    network_mode: host
+    environment:
+      - DISPLAY=${DISPLAY}
+    privileged: true
+    volumes:
+      - /dev:/dev
+      - ~/mypkg_ros/:/opt/ros_ws/src/mypkg_ros
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /etc/machine-id:/etc/machine-id:ro
+      - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro
+    stdin_open: true
+    tty: true

@@ -1,0 +1,47 @@
+FROM ubuntu:24.04
+
+# update base system
+RUN apt-get update && apt-get upgrade -y --no-install-recommends
+
+RUN apt-get install -y --no-install-recommends software-properties-common && add-apt-repository universe
+
+RUN apt update && apt install curl -y
+
+RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+
+RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
+
+RUN apt-get update && apt install ros-dev-tools -y
+
+RUN apt-get update && apt-get upgrade -y --no-install-recommends
+
+# install gazebo & rviz2 packages
+RUN apt-get install -y --no-install-recommends \
+    vim \
+    psmisc \
+    qt5ct \
+    ros-dev-tools \
+    ros-jazzy-desktop \
+    ros-jazzy-gz-ros2-control \
+    ros-jazzy-image-geometry \
+    ros-jazzy-nav2-bringup \
+    ros-jazzy-nav2-rviz-plugins \
+    ros-jazzy-ros-gz-bridge \
+    ros-jazzy-ros-gz-image \
+    ros-jazzy-ros-gz-sim \
+    ros-jazzy-ros2controlcli \
+    ros-jazzy-rqt-graph \
+    ros-jazzy-rqt-image-view \
+    ros-jazzy-rviz2 \
+    ros-jazzy-navigation2 \
+    ros-jazzy-turtlebot3* \
+    python3-colcon-common-extensions
+
+ENV TURTLEBOT3_MODEL=waffle
+ENV GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/jazzy/share/turtlebot3_gazebo/models
+
+# update ~/.bashrc
+RUN echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
+
+# set the working directory
+WORKDIR /opt/ros_ws/src/mypkg_ros
