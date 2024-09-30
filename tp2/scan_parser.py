@@ -47,10 +47,19 @@ class Processor:
         return (b + a)/2
     
     def __split_by_cylinder(self, ranges):
+        # This loop is to loop the start of the array because 
+        # it may start at the middle of a cylinder
+        loop = ranges
+        for range in ranges:
+            if range:
+                loop = loop[1:] + [loop[0]]
+            else:
+                break
+            
         cylinders = []
         rigth_side = None
         left_side = None
-        for range in ranges:
+        for range in loop:
             if range['range']:
                 if not rigth_side:
                     rigth_side = self.__polar_to_xy(range)
@@ -65,6 +74,13 @@ class Processor:
                 })
                 rigth_side = None
                 left_side = None
+        
+        # This is because it may be a last cylinder
+        if left_side:
+            cylinders.append({
+                    'x': self.__middle(rigth_side['x'], left_side['x']),
+                    'y': self.__middle(rigth_side['y'], left_side['y']),
+                })
         return cylinders
 
 def parse_args():
