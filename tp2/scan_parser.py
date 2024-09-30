@@ -43,6 +43,9 @@ class Processor:
         y = self.y + polar['range'] * math.sin(polar['angle'])
         return {'x': x, 'y': y}
     
+    def __middle(self, a, b):
+        return (b + a)/2
+    
     def __split_by_cylinder(self, ranges):
         cylinders = []
         rigth_side = None
@@ -57,8 +60,8 @@ class Processor:
             
             if left_side:
                 cylinders.append({
-                    'x': (rigth_side['x'] + left_side['x'])/2,
-                    'y': (rigth_side['y'] + left_side['y'])/2,
+                    'x': self.__middle(rigth_side['x'], left_side['x']),
+                    'y': self.__middle(rigth_side['y'], left_side['y']),
                 })
                 rigth_side = None
                 left_side = None
@@ -66,8 +69,8 @@ class Processor:
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        prog='DumpParser',
-        description='This script parse a dump of odom'
+        prog='ScanParser',
+        description='This script parse a dump of scan'
     )
 
     parser.add_argument('filepath')
