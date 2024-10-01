@@ -1,41 +1,32 @@
-FROM ubuntu:22.04
+FROM ros:humble
 
-# RUN apt-get install -y --no-install-recommends software-properties-common && add-apt-repository universe
-
-RUN apt update && apt install curl -y
-
-RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
-
-RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
-
-RUN apt-get update && apt-get upgrade -y --no-install-recommends
-
-ENV DEBIAN_FRONTEND=noninteractive
-
-# install gazebo & rviz2 packages
-RUN apt-get install -y --no-install-recommends \
-    vim \
-    ros-dev-tools \
-    ros-humble-desktop-full \
-    ros-humble-image-geometry \
-    ros-humble-nav2-bringup \
-    ros-humble-nav2-rviz-plugins \
-    ros-humble-ros-gz-bridge \
-    ros-humble-ros-gz-image \
-    ros-humble-ros-gz-sim \
-    ros-humble-ros2controlcli \
-    ros-humble-rqt-graph \
-    ros-humble-rqt-image-view \
-    ros-humble-rviz2 \
+RUN apt-get update && apt-get install -y \
+    python3-colcon-common-extensions \
+    ros-humble-rmw-cyclonedds-cpp \
     ros-humble-navigation2 \
+    ros-humble-nav2-bringup \
     ros-humble-turtlebot3* \
-    python3-colcon-common-extensions
+    && rm -rf /var/lib/apt/lists/*
 
+# Set up environment variables
+ENV ROS_DISTRO humble
+ENV ROS_WS /dev_ws
 ENV TURTLEBOT3_MODEL=waffle
-ENV GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
+ENV GAZEBO_MODEL_PATH=/opt/ros/humble/share/turtlebot3_gazebo/models:$GAZEBO_MODEL_PATH
 
-# update ~/.bashrc
-RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+# Create the workspace
+RUN mkdir -p $ROS_WS/src
+COPY map_from_scan $ROS_WS/src/
+WORKDIR $ROS_WS
+RUN /bin/bash -c "source /opt/ros/$ROS_DISTRO/setup.bash && colcon build"
 
-# set the working directory
-WORKDIR /opt/ros_ws/src/mypkg_ros
+# Source the ROS 2 workspace in the container
+RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> ~/.bashrc
+RUN echo "source $ROS_WS/install/setup.bash" >> ~/.bashrc
+
+# Copy the launch and the world model
+COPY launch.py .
+COPY world.model .
+
+# Set the entrypoint for running ROS 2 commands
+ENTRYPOINT ["/bin/bash", "-c", "source /opt/ros/$ROS_DISTRO/setup.bash && source $ROS_WS/install/setup.bash && source /usr/share/gazebo/setup.bash && ros2 launch launch.py"]
