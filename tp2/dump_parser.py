@@ -7,35 +7,38 @@ import argparse
 class Parser:
     # Function to parse a line of the log file
     def __parse_line(self, line):
-        # Regular expression to extract data from the log line
-        pattern = re.compile(r'builtin_interfaces\.msg\.Time\(sec=(\d+), nanosec=(\d+)\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)')
-        match = pattern.match(line)
-        if match:
-            # Extract data from the match groups
-            sec = int(match.group(1))
-            nanosec = int(match.group(2))
-            x = float(match.group(3))
-            y = float(match.group(4))
-            orientation = float(match.group(5))
-            linear_velocity = float(match.group(6))
-            angular_velocity = float(match.group(7))
-            
-            if linear_velocity == 0.0 and angular_velocity == 0.0:
-                return None
-
-            # Create a timestamp from sec and nanosec
-            timestamp = datetime.fromtimestamp(sec + nanosec / 1e9)
-            
-            return {
-                'timestamp': timestamp,
-                'x': x,
-                'y': y,
-                'orientation': orientation,
-                'linear_velocity': linear_velocity,
-                'angular_velocity': angular_velocity
-            }
-        else:
+        # Regular expression to match the Time part
+        time_pattern = r'builtin_interfaces\.msg\.Time\(sec=(\d+), nanosec=(\d+)\)'
+        
+        # Split the line on tabs
+        parts = line.split('\t')
+        
+        # Extract the Time part using regex
+        time_match = re.match(time_pattern, parts[0])
+        if not time_match:
+            raise ValueError(f"Invalid time format: {parts[0]}")
+        
+        sec = int(time_match.group(1))
+        nanosec = int(time_match.group(2))
+        
+        # Convert the remaining parts to floats
+        values = list(map(float, parts[1:]))
+        x, y, orientation, linear_velocity, angular_velocity = values
+        
+        if linear_velocity == 0.0 and angular_velocity == 0.0:
             return None
+
+        # Create a timestamp from sec and nanosec
+        timestamp = datetime.fromtimestamp(sec + nanosec / 1e9)
+        
+        return {
+            'timestamp': timestamp,
+            'x': x,
+            'y': y,
+            'orientation': orientation,
+            'linear_velocity': linear_velocity,
+            'angular_velocity': angular_velocity
+        }
 
     # Function to parse the log file
     def parse_log_file(self,file_path):
