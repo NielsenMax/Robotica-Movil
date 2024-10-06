@@ -33,7 +33,6 @@ def generate_launch_description():
     gazebo_dir = os.environ.get('GAZEBO_RESOURCE_PATH'),
     print("{}".format(gazebo_dir)),
     gazebo_dir = 'usr/share/gazebo/../../share/gazebo-11'
-    package_dir = '/home/tomas/5° Año/robotica-movil/tp2/ej8/'
 
     # Create the launch configuration variables
     slam = LaunchConfiguration('slam')
@@ -45,8 +44,9 @@ def generate_launch_description():
     use_composition = LaunchConfiguration('use_composition')
     use_respawn = LaunchConfiguration('use_respawn')
 
-    world_path = '/dev_ws/world.model'
+    world_path = '/home/lau/LCC/Robotica/Robotica-Movil/tp2/world.model'
 
+    # Launch configuration variables specific to simulation
     rviz_config_file = LaunchConfiguration('rviz_config_file')
     use_simulator = LaunchConfiguration('use_simulator')
     use_robot_state_pub = LaunchConfiguration('use_robot_state_pub')
@@ -128,7 +128,8 @@ def generate_launch_description():
     declare_world_cmd = DeclareLaunchArgument(
         'world',
         default_value=world_path,
-        description='Full path to world model file to load')
+        description='Full path to world model file to load'
+    )
 
     declare_robot_name_cmd = DeclareLaunchArgument(
         'robot_name',
@@ -178,13 +179,15 @@ def generate_launch_description():
             '-robot_namespace', namespace,
             '-x', pose['x'], '-y', pose['y'], '-z', pose['z'],
             '-R', pose['R'], '-P', pose['P'], '-Y', pose['Y']])
-
+    
+    #cylinder_node = Node(
+    #    package='map_from_scan',
+    #    executable='scanner_node',
+    #    output='screen')
     cylinder_node = Node(
-        package='map_from_scan',
-        executable='scanner_node',
+        package='cylinder_detector_pkg',
+        executable='cylinder_detector_node',
         output='screen')
-
-
     rviz_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(launch_dir, 'rviz_launch.py')),
@@ -217,7 +220,7 @@ def generate_launch_description():
     ld.add_action(start_gazebo_server_cmd)
     ld.add_action(start_gazebo_client_cmd)
     ld.add_action(start_gazebo_spawner_cmd)
-
+    
     ld.add_action(cylinder_node)
 
     # Add the actions to launch all of the navigation nodes
