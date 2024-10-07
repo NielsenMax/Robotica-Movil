@@ -82,7 +82,7 @@ class Plotter:
         x_coords = [data['x'] for data in self.parsed_data]
         y_coords = [data['y'] for data in self.parsed_data]
         
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(10, 10))
         if self.selected_indices:
             plt.scatter([x_coords[i] for i in self.selected_indices], [y_coords[i] for i in self.selected_indices], c='red', label='Selected Points', zorder = 2)
         plt.plot(x_coords, y_coords, marker='o', zorder=1)
@@ -98,7 +98,7 @@ class Plotter:
         y_coords = [data['y'] for data in self.parsed_data]
         orientations = [data['orientation'] for data in self.parsed_data]
         
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(10, 10))
         # plt.scatter(x_coords, y_coords, c='blue', label='Position')
         plt.scatter(x_coords[0], y_coords[0], c='blue', label='Start')
         plt.scatter(x_coords[-1], y_coords[-1], c='red', label='End')
