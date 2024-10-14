@@ -1,2 +1,8 @@
 */mav0/*
 tp1/__pycache__/*
+tp3/cam_checkerboard/*
+tp3/ros2.bag2/*
+tp3/calibrationdata/*.png
+tp3/calibrationdata.tar.gz
+tp3/cam_checkerboard.bag
+
