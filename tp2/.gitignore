@@ -1,0 +1,8 @@
+__pycache__/**/*
+build/**/*
+install/**/*
+log/**/*
+map_from_scan/build/**/*
+map_from_scan/install/**/*
+map_from_scan/__pycache__/**/*
+map_from_scan/log/**/*

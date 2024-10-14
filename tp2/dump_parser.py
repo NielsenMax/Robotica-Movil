@@ -73,6 +73,8 @@ class Plotter:
             self.__plot_y_coordinate()
         if args.orientation:
             self.__plot_orientation()
+        if args.analysis:
+            self.__analyze_data()
 
     def __percentages_to_indices(self, percentages, data_length):
         indices = [int(p * data_length) for p in percentages]
@@ -81,7 +83,7 @@ class Plotter:
     def __plot_xy_path(self):
         x_coords = [data['x'] for data in self.parsed_data]
         y_coords = [data['y'] for data in self.parsed_data]
-        
+        #breakpoint()
         plt.figure(figsize=(10, 10))
         if self.selected_indices:
             plt.scatter([x_coords[i] for i in self.selected_indices], [y_coords[i] for i in self.selected_indices], c='red', label='Selected Points', zorder = 2)
@@ -196,7 +198,7 @@ class Plotter:
     def __plot_orientation(self):
         timestamps = [data['timestamp'] for data in self.parsed_data]
         orientations = [data['orientation'] for data in self.parsed_data]
-
+        #breakpoint()
         plt.figure(figsize=(10, 6))
         if self.selected_indices:
             plt.scatter([timestamps[i] for i in self.selected_indices], [orientations[i] for i in self.selected_indices], c='red', label='Selected Points', zorder=2)
@@ -207,6 +209,21 @@ class Plotter:
         plt.grid(True)
         plt.legend()
         plt.show()
+
+    def __analyze_data(self):
+        x_coords = [data['x'] for data in self.parsed_data]
+        y_coords = [data['y'] for data in self.parsed_data]
+        orientations = [data['orientation'] for data in self.parsed_data]
+
+        min_x = round(min(x_coords), 5)
+        max_x = round(max(x_coords), 5)
+        min_y = round(min(y_coords), 5)
+        max_y = round(max(y_coords), 5)
+        min_orientation = min(orientations)
+        max_orientation = max(orientations)
+        print(f"x: min={min_x}, max={max_x}")
+        print(f"y: min={min_y}, max={max_y}")
+        print(f"θ: min={min_orientation}, max={max_orientation}")
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -224,6 +241,7 @@ def parse_args():
     parser.add_argument('--orientation', action='store_true')
     parser.add_argument('-s', '--step', default=20, type=int)
     parser.add_argument('-p', '--points', type=float, nargs='*')
+    parser.add_argument('-a', '--analysis', action='store_true')
     return parser.parse_args()
 
 def main():

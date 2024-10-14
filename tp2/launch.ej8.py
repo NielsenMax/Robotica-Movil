@@ -44,7 +44,7 @@ def generate_launch_description():
     use_composition = LaunchConfiguration('use_composition')
     use_respawn = LaunchConfiguration('use_respawn')
 
-    world_path = '/home/lau/LCC/Robotica/Robotica-Movil/tp2/world.model'
+    world_path = '/home/lau/LCC/Robotica/Robotica-Movil/tp2/world.ej8.model'
 
     # Launch configuration variables specific to simulation
     rviz_config_file = LaunchConfiguration('rviz_config_file')
@@ -180,13 +180,9 @@ def generate_launch_description():
             '-x', pose['x'], '-y', pose['y'], '-z', pose['z'],
             '-R', pose['R'], '-P', pose['P'], '-Y', pose['Y']])
     
-    #cylinder_node = Node(
-    #    package='map_from_scan',
-    #    executable='scanner_node',
-    #    output='screen')
     cylinder_node = Node(
-        package='cylinder_detector_pkg',
-        executable='cylinder_detector_node',
+        package='map_from_scan',
+        executable='scanner_node',
         output='screen')
     rviz_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
