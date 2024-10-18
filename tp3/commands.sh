@@ -19,6 +19,14 @@ python3 ./camera_info.py
 
 ros2 run image_view image_view image:=/left/image_rect_color
 
-#Features
-#Correr todos los anteriores
+# Features
+# Correr todos los anteriores
 python3 ./features.py
+ros2 run image_view image_view image:=/left/features
+ros2 run image_view image_view image:=/right/features
+
+
+# Matches
+# Correr todo Rectification
+python3 ./matcher.py
+ros2 run image_view image_view image:=/matches
