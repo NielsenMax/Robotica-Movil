@@ -18,3 +18,7 @@ ros2 bag play ros2.bag2 --remap /cam0/image_raw:=/left/image_raw \
 python3 ./camera_info.py
 
 ros2 run image_view image_view image:=/left/image_rect_color
+
+#Features
+#Correr todos los anteriores
+python3 ./features.py
