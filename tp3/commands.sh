@@ -30,3 +30,9 @@ ros2 run image_view image_view image:=/right/features
 # Correr todo Rectification
 python3 ./matcher.py
 ros2 run image_view image_view image:=/matches
+
+# Disparity
+# Correr todo rectificacion
+python3 ./disparity.py
+
+ros2 run image_view disparity_view --ros-args --remap image:=/disparity_new
