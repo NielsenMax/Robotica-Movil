@@ -36,3 +36,14 @@ ros2 run image_view image_view image:=/matches
 python3 ./disparity.py
 
 ros2 run image_view disparity_view --ros-args --remap image:=/disparity_new
+
+# Dense Mapping
+# Correr todo disparity
+python3 ./dense_mapping.py
+
+# Dense mapping with ground-truth
+
+ros2 bag play hall_01_easy.bag2 --remap /cam0/image_raw:=/left/image_raw \
+/cam0/camera_info:=/left/camera_info \
+/cam1/image_raw:=/right/image_raw \
+/cam1/camera_info:=/right/camera_info
