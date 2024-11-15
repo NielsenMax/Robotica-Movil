@@ -11,6 +11,7 @@ from sensor_msgs.msg import CameraInfo, Image, PointCloud2, PointField
 from message_filters import ApproximateTimeSynchronizer, Subscriber
 from cv_bridge import CvBridge, CvBridgeError
 import sensor_msgs_py.point_cloud2 as pc2
+import std_msgs
 
 # Standard library imports
 import yaml
@@ -18,6 +19,7 @@ from typing import Optional
 
 # Third-party imports
 import cv2
+#from cv2 import sfm
 import numpy as np
 
 class MatcherNode(Node):
@@ -37,7 +39,8 @@ class MatcherNode(Node):
         self.sync.registerCallback(self.__cb)
         
         self.br = CvBridge()
-        self.kpe = cv2.ORB_create()
+        
+        self.kpe : cv2.ORB = cv2.ORB_create()
         self.bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
 
         self.load_calibration_data()
@@ -83,7 +86,7 @@ class MatcherNode(Node):
         left_kp : list[cv2.KeyPoint]
         left_desc: Optional[cv2.Mat]
         left_kp, left_desc = self.kpe.detectAndCompute(left_frame,None)
-
+        
         right_kp: list[cv2.KeyPoint]
         right_desc: Optional[cv2.Mat]
         right_kp, right_desc = self.kpe.detectAndCompute(right_frame,None)
@@ -101,15 +104,33 @@ class MatcherNode(Node):
 
         # Publicamos la imagen con los matches convertida a imagen ROS
         self.matches_pub.publish(self.br.cv2_to_imgmsg(match_img,encoding="bgr8"))
+        
+         # Convert keypoints to NumPy arrays
+        left_pts = np.array([left_kp[m.queryIdx].pt for m in good_matches], dtype=np.float32).T  # Shape: (2, N)
+        right_pts = np.array([right_kp[m.trainIdx].pt for m in good_matches], dtype=np.float32).T  # Shape: (2, N)
 
-        # Triangulamos los puntos 3D, estos están en coordenadas homogéneas
-        triang_points_hom : np.ndarray = cv2.triangulatePoints(self.left_proj, self.right_proj, left_kp, right_kp)
+        # Ensure the points are in the shape (2, N)
+        #left_pts = np.array(left_pts).T  # Shape: (2, N)
+        #right_pts = np.array(right_pts).T  # Shape: (2, N)
 
-        # Convertimos los puntos 3D a coordenadas cartesianas
-        triang_points_euc = cv2.convertPointsFromHomogeneous(triang_points_hom.T)
+        # Triangulate the 3D points in homogeneous coordinates
+        triang_points_hom = cv2.triangulatePoints(self.left_proj, self.right_proj, left_pts, right_pts)
 
-        point_cloud_msg = self.create_point_cloud_msg(triang_points_euc)
-        self.point_cloud_pub(point_cloud_msg)
+        # Convert homogeneous coordinates to Euclidean coordinates
+        triang_points_euc = cv2.convertPointsFromHomogeneous(triang_points_hom.T).reshape(-1, 3)
+
+        fields = [
+            PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
+            PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1),
+            PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1)
+        ]
+        
+        header = std_msgs.msg.Header()
+        header.stamp = self.get_clock().now().to_msg()  # Use the correct time function
+        header.frame_id = "map"
+        
+        point_cloud_msg = pc2.create_cloud(header, fields, triang_points_euc)
+        self.point_cloud_pub.publish(point_cloud_msg)
         self.get_logger().info('Publishing point cloud')
 
     def __cb(self, left_msg, right_msg):
