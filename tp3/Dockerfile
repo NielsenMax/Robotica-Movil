@@ -8,7 +8,9 @@ RUN apt-get update && apt-get install -y \
     ros-humble-stereo-image-proc \
     ros-humble-image-pipeline \
     python3-pip \
-    aria2 
+    aria2 \
+    python3-pandas \
+    vim
     #&& rm -rf /var/lib/apt/lists/*
         
 # Install rosbag conversion tool (assuming it's available via pip or apt)
@@ -34,7 +36,7 @@ COPY ./bag_stereo_package/ /root/ws/bag_stereo_package
 WORKDIR /root/ws
 
 # Build your workspace if necessary
-RUN /bin/bash -c "source /opt/ros/humble/setup.bash && colcon build"
+RUN /bin/bash -c "source /opt/ros/humble/setup.bash && colcon build && colcon test"
 
 # Allow X11 access for GUI applications (like RViz)
 ENV DISPLAY=:0
@@ -42,7 +44,8 @@ ENV QT_X11_NO_MITSHM=1
 
 RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
 RUN echo "source /root/ws/install/setup.bash" >> ~/.bashrc
-
+RUN echo "alias play=\"ros2 run bag_stereo_package bag_stereo_node\"" >> ~/.bashrc
+RUN echo "alias match=\"ros2 run bag_stereo_package matcher_node\"" >> ~/.bashrc
 # Dar permisos de ejecución al script
 #RUN chmod +x /root/ws/scripts/entrypoint.sh
 

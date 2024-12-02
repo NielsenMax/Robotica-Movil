@@ -9,6 +9,8 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import CameraInfo, Image, PointCloud2, PointField
 from message_filters import ApproximateTimeSynchronizer, Subscriber
+import builtin_interfaces.msg 
+from geometry_msgs.msg import PoseStamped
 from cv_bridge import CvBridge, CvBridgeError
 import sensor_msgs_py.point_cloud2 as pc2
 import std_msgs
@@ -16,8 +18,13 @@ import std_msgs
 # Importaciones estándar
 import yaml
 import numpy as np
+import pandas as pd
 import cv2
+from typing import Any
 
+LEFT_CAMERA_DATA = 'calibrationdata/left.yaml'
+RIGHT_CAMERA_DATA = 'calibrationdata/right.yaml'
+GROUND_TRUTH = 'ros2.bag2/groundtruth.csv'
 
 class MatcherNode(Node):
     """Nodo para procesar imágenes estéreo y generar nubes de puntos 3D."""
@@ -29,6 +36,7 @@ class MatcherNode(Node):
         self.matches_pub = self.create_publisher(Image, 'matches', 10)
         self.point_cloud_pub = self.create_publisher(PointCloud2, 'point_cloud', 10)
         self.right_image_with_left = self.create_publisher(Image, '/right/image_transformed', 10)
+        self.pose_pub = self.create_publisher(PoseStamped, 'ground_truth_pose', 10)
 
         # Suscriptores sincronizados para las imágenes rectificadas
         self.left_image_sub = Subscriber(self, Image, '/left/image_rect_color')
@@ -47,7 +55,15 @@ class MatcherNode(Node):
 
         # Cargar datos de calibración
         self.load_calibration_data()
+        self.load_ground_truth()
         self.get_logger().info("MatcherNode inicializado y listo para procesar.")
+
+    def load_ground_truth(self):
+        """
+        Carga el groundtruth desde el csv
+        """
+        self.groundtruth = pd.read_csv(GROUND_TRUTH, skipinitialspace = True)
+        self.groundtruth['timestamp'] = self.groundtruth['#timestamp'].astype(np.int64)
 
     def load_calibration_data(self):
         """
@@ -63,7 +79,7 @@ class MatcherNode(Node):
         self.left_proj = np.array(left_data['projection_matrix']['data']).reshape((3, 4))
         self.right_proj = np.array(right_data['projection_matrix']['data']).reshape((3, 4))
         self.get_logger().info("Datos de calibración cargados.")
-
+    
     def __callback(self, left_msg, right_msg):
         """
         Callback sincronizado que procesa las imágenes izquierda y derecha.
@@ -136,6 +152,9 @@ class MatcherNode(Node):
         # Transformar puntos y publicar en la imagen derecha
         self.visualize_transformed_points(right_frame, left_pts, H)
 
+        # Publicamos la pose
+        self.publish_pose(left_msg.header.stamp)
+
     def publish_point_cloud(self, points: np.ndarray):
         """
         Publica una nube de puntos 3D.
@@ -162,6 +181,69 @@ class MatcherNode(Node):
             cv2.circle(right_frame_bgr, tuple(int(x) for x in pt[0]), radius=5, color=(0, 255, 0), thickness=-1)
         self.right_image_with_left.publish(self.br.cv2_to_imgmsg(right_frame_bgr, encoding="bgr8"))
 
+    def find_closest_pose(self, query_timestamp):
+        """
+        Encuentra la pose más cercana al timestamp dado.
+        
+        Args:
+            query_timestamp (int): Timestamp actual (en nanosegundos).
+            
+        Returns:
+            dict: Pose que contiene posición y orientación.
+        """
+        # Convertir el timestamp a nanosegundos
+        timestamp = query_timestamp.sec * 1e9 + query_timestamp.nanosec
+        # Calcular la diferencia absoluta entre los timestamps
+        self.groundtruth['abs_diff'] = abs(self.groundtruth['timestamp'] - timestamp)
+
+        # Encontrar el índice del timestamp más cercano
+        closest_idx = self.groundtruth['abs_diff'].idxmin()
+
+        # Extraer posición y orientación
+        position = self.groundtruth.iloc[closest_idx][['p_RS_R_x [m]', 'p_RS_R_y [m]', 'p_RS_R_z [m]']].values
+        orientation = self.groundtruth.iloc[closest_idx][['q_RS_w []', 'q_RS_x []', 'q_RS_y []', 'q_RS_z []']].values
+
+        return {
+            'timestamp': self.groundtruth.iloc[closest_idx]['timestamp'],
+            'position': position,
+            'orientation': orientation
+        }
+    
+    def publish_pose(self, timestamp):
+        """
+        Publica la pose más cercana al timestamp dado.
+        
+        Args:
+            timestamp (int): Timestamp actual (en nanosegundos).
+        """
+
+        pose = self.find_closest_pose(timestamp)
+        msg = self.get_pose_msg(pose)
+
+        self.pose_pub.publish(msg)
+
+    def get_pose_msg(self, pose: dict[str, Any]):
+        """
+        Crea un mensaje de ROS 2 para la pose dada.
+        
+        Args:
+            pose (dict): Pose que contiene posición y orientación.
+            
+        Returns:
+            PoseStamped: Mensaje de ROS 2 con la pose.
+        """
+        msg = PoseStamped()
+        msg.header.stamp = pose['timestamp']
+        msg.header.frame_id = 'body'
+        msg.pose.position.x = pose['position'][0]
+        msg.pose.position.y = pose['position'][1]
+        msg.pose.position.z = pose['position'][2]
+        msg.pose.orientation.w = pose['orientation'][0]
+        msg.pose.orientation.x = pose['orientation'][1]
+        msg.pose.orientation.y = pose['orientation'][2]
+        msg.pose.orientation.z = pose['orientation'][3]
+
+        return msg
 
 def main(args=None):
     rclpy.init(args=args)
